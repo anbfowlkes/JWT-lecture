@@ -15,12 +15,28 @@ class UsersController < ApplicationController
 
   # POST /users
   def create
-    @user = User.new(user_params)
+    user = User.create!(email: params[:email], password: params[:password])
+    render json: user
+  end
 
-    if @user.save
-      render json: @user, status: :created, location: @user
+  def login
+    user = User.find_by!(email: params[:email]).try(:authenticate, params[:password])
+    if user
+      token = generate_token(user.id)
+      render json: {user: user, token: token}
     else
-      render json: @user.errors, status: :unprocessable_entity
+      render json: {error: "Incorrect Password"}
+    end
+  end
+
+  def profile
+    token = request.headers['token']
+    user_id = decode_token(token)
+    user = User.find_by!(id: user_id)
+    if user
+      render json: user
+    else
+      render json: {error: 'no user found'}
     end
   end
 
